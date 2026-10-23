@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
     FaTimes, 
     FaBuilding, 
@@ -16,29 +16,36 @@ import {
     FaBriefcase
 } from 'react-icons/fa';
 
-export default function ModalIndividual({ isOpen, onClose, individualData, onAddParticipant }) {
+export default function ModalIndividual({ 
+    isOpen, 
+    onClose, 
+    individualData, 
+    onAddParticipant,
+    municipalities = [],
+    barangays = []
+}) {
     const [activeWizardStep, setActiveWizardStep] = useState(1);
     const [participantList, setParticipantList] = useState([]);
     const [viewingParticipant, setViewingParticipant] = useState(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
-    const [wizardData, setWizardData] = useState({
-        track: 'MD',
-        fullName: '',
-        sex: 'Female',
-        address: '',
-        contactNumber: '',
-        municipality: 'Kapatagan',
-        barangay: '',
-        validated: true,
-        assessmentNotes: '',
-        enterpriseName: '',
-        enterpriseType: 'Consumer Retail & Trading',
-        businessLocation: '',
-        targetJob: '',
-        skillsTraining: '',
-        preferredEmployer: ''
-    });
+const [wizardData, setWizardData] = useState({
+    track: 'MD',
+    fullName: '',
+    sex: 'Female',
+    address: '',
+    contactNumber: '',
+    municipality_id: '',
+    barangay_id: '',
+    validated: true,
+    assessmentNotes: '',
+    enterpriseName: '',
+    enterpriseType: 'Consumer Retail & Trading',
+    businessLocation: '',
+    targetJob: '',
+    skillsTraining: '',
+    preferredEmployer: ''
+});
 
     // Reset wizard state whenever the modal is opened
     useEffect(() => {
@@ -63,6 +70,18 @@ export default function ModalIndividual({ isOpen, onClose, individualData, onAdd
             });
         }
     }, [isOpen, individualData]);
+
+    const filteredBarangays = useMemo(() => {
+    if (!wizardData.municipality_id) {
+        return [];
+    }
+
+    return barangays.filter(
+        barangay =>
+            String(barangay.municipality_id) ===
+            String(wizardData.municipality_id)
+    );
+}, [barangays, wizardData.municipality_id]);
 
     const handleWizardSubmit = (e) => {
         e.preventDefault();
@@ -245,25 +264,59 @@ export default function ModalIndividual({ isOpen, onClose, individualData, onAdd
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label className="block text-xs font-medium text-slate-700 mb-1">Municipality</label>
-                                        <select 
-                                            value={wizardData.municipality}
-                                            onChange={e => setWizardData({...wizardData, municipality: e.target.value})}
-                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:border-emerald-500"
-                                        >
-                                            <option value="Kapatagan">Kapatagan</option>
-                                            <option value="Baroy">Baroy</option>
-                                        </select>
+<select
+    value={wizardData.municipality_id}
+    onChange={(e) => {
+        setWizardData(prev => ({
+            ...prev,
+            municipality_id: e.target.value,
+            barangay_id: ''
+        }));
+    }}
+    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:border-emerald-500"
+    required
+>
+    <option value="">Select Municipality</option>
+
+    {municipalities.map((municipality) => (
+        <option
+            key={municipality.id}
+            value={municipality.id}
+        >
+            {municipality.municipality}
+        </option>
+    ))}
+</select>
                                     </div>
                                     <div>
                                         <label className="block text-xs font-medium text-slate-700 mb-1">Barangay *</label>
-                                        <input 
-                                            type="text" 
-                                            required
-                                            value={wizardData.barangay}
-                                            onChange={e => setWizardData({...wizardData, barangay: e.target.value})}
-                                            placeholder="e.g. Barangay Poblacion"
-                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:border-emerald-500"
-                                        />
+<select
+    value={wizardData.barangay_id}
+    onChange={(e) => {
+        setWizardData(prev => ({
+            ...prev,
+            barangay_id: e.target.value
+        }));
+    }}
+    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:border-emerald-500"
+    required
+    disabled={!wizardData.municipality_id}
+>
+    <option value="">
+        {wizardData.municipality_id
+            ? 'Select Barangay'
+            : 'Select Municipality First'}
+    </option>
+
+    {filteredBarangays.map((barangay) => (
+        <option
+            key={barangay.barangay_id}
+            value={barangay.barangay_id}
+        >
+            {barangay.barangay_name}
+        </option>
+    ))}
+</select>
                                     </div>
                                 </div>
                             </div>
