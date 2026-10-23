@@ -1,258 +1,628 @@
-import { useState, useRef, useEffect } from 'react';
-import { Link, usePage } from '@inertiajs/react';
+
+import { useState, useRef, useEffect } from "react";
+import { Link, usePage } from "@inertiajs/react";
+
 import {
     FaThLarge,
     FaUsers,
     FaClipboardList,
     FaChartPie,
-    FaFileAlt,
     FaMapMarkerAlt,
     FaUserCog,
     FaUser,
     FaSignOutAlt,
     FaChevronDown,
-    FaStore,
-    FaBuilding
-} from 'react-icons/fa';
+    FaBuilding,
+    FaChartLine,
+    FaBriefcase,
+    FaShieldAlt,
+} from "react-icons/fa";
 
-export default function Layout({ children, auth }) {
-    const { url } = usePage();
+export default function Layout({ children }) {
+    const { url, props } = usePage();
+
+    const user = props.auth?.user;
+
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const dropdownRef = useRef(null);
 
-    // Close profile dropdown when clicking anywhere outside
+    // --------------------------------------------------
+    // USER INFORMATION
+    // --------------------------------------------------
+
+    const fullName =
+        [
+            user?.firstname,
+            user?.middlename,
+            user?.lastname,
+        ]
+            .filter((part) => String(part ?? "").trim() !== "")
+            .join(" ") ||
+        user?.name ||
+        "User";
+
+    const userEmail = user?.email || "No email available";
+
+    const initials =
+        fullName
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((part) => part.charAt(0).toUpperCase())
+            .join("") || "U";
+
+    // --------------------------------------------------
+    // NORMALIZE USER ROLES
+    // Supports arrays, JSON strings, and plain strings.
+    // --------------------------------------------------
+
+    const normalizedRoles = (() => {
+        const roles = user?.roles ?? [];
+
+        const normalize = (items) =>
+            items
+                .map((role) =>
+                    String(
+                        typeof role === "object" && role !== null
+                            ? role.name ?? ""
+                            : role
+                    )
+                        .trim()
+                        .toLowerCase()
+                )
+                .filter(Boolean);
+
+        if (Array.isArray(roles)) {
+            return normalize(roles);
+        }
+
+        if (typeof roles === "string") {
+            try {
+                const parsed = JSON.parse(roles);
+
+                if (Array.isArray(parsed)) {
+                    return normalize(parsed);
+                }
+
+                if (typeof parsed === "string") {
+                    return parsed
+                        .split(",")
+                        .map((role) => role.trim().toLowerCase())
+                        .filter(Boolean);
+                }
+            } catch {
+                // Handle plain text role values.
+            }
+
+            return roles
+                .split(",")
+                .map((role) => role.trim().toLowerCase())
+                .filter(Boolean);
+        }
+
+        return [];
+    })();
+
+    const isAdmin = normalizedRoles.includes("admin");
+    const isLguUser = normalizedRoles.includes("lgu");
+
+    const userRole = normalizedRoles
+        .map((role) => {
+            if (role === "mpdos") return "MPDOs";
+            return role.toUpperCase();
+        })
+        .join(", ");
+
+    // --------------------------------------------------
+    // NAVIGATION HELPERS
+    // --------------------------------------------------
+
+    const isActive = (path) => {
+        const currentPath =
+            url.split("?")[0].replace(/\/+$/, "") || "/";
+
+        const targetPath =
+            path.replace(/\/+$/, "") || "/";
+
+        return (
+            currentPath === targetPath ||
+            currentPath.startsWith(`${targetPath}/`)
+        );
+    };
+
+    // Close dropdown when clicking outside.
     useEffect(() => {
-        function handleClickOutside(event) {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        const handleClickOutside = (event) => {
+            if (
+                dropdownRef.current &&
+                !dropdownRef.current.contains(event.target)
+            ) {
                 setIsProfileOpen(false);
             }
-        }
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+
+        return () => {
+            document.removeEventListener(
+                "mousedown",
+                handleClickOutside
+            );
+        };
     }, []);
 
-    // Check active nav route
-    const isActive = (path) => url === path || url.startsWith(path + '/');
+    // Close dropdown after navigation.
+    useEffect(() => {
+        setIsProfileOpen(false);
+    }, [url]);
 
     return (
-        <div className="flex h-screen bg-slate-50 font-sans text-slate-800 antialiased">
+        <div className="flex h-screen overflow-hidden bg-slate-100 font-sans text-slate-800 antialiased">
 
-            {/* Modern Sidebar */}
-            <aside className="w-64 bg-white border-r border-slate-200/80 flex flex-col z-20 shadow-xs">
+            {/* ================================================== */}
+            {/* SIDEBAR */}
+            {/* ================================================== */}
 
-                {/* Logo & Brand Header */}
-                <div className="h-[50px] flex items-center px-6 border-b border-slate-100">
-                    <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-emerald-500/20">
+            <aside className="relative z-20 flex w-64 shrink-0 flex-col border-r border-slate-200 bg-white shadow-sm">
+
+                {/* Brand Header */}
+                <div className="relative overflow-hidden border-b border-slate-100 bg-white px-5 py-5">
+                    <div className="absolute right-0 top-0 h-20 w-20 rounded-full bg-emerald-50/80 blur-2xl" />
+
+                    <div className="relative flex items-center gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-500 text-sm font-extrabold tracking-wide text-white shadow-lg shadow-emerald-700/20">
                             SLP
                         </div>
-                        <div>
-                            <h1 className="text-sm font-bold text-slate-900 leading-tight">
-                                Dashboard
+
+                        <div className="min-w-0">
+                            <h1 className="text-sm font-extrabold tracking-tight text-slate-900">
+                                SLP Dashboard
                             </h1>
-                            <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider block">
+
+                            <p className="mt-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                                 Management Portal
-                            </span>
+                            </p>
                         </div>
                     </div>
                 </div>
 
-                {/* Navigation Items */}
-                <nav className="flex-1 px-3 py-4 space-y-2 overflow-y-auto">
-                    <div>
-                        <span className="px-3 text-[11px] font-semibold tracking-wider text-slate-400 uppercase block mb-2">
-                            Overview
-                        </span>
-                        <div className="space-y-1">
-                            <NavItem href="/dashboard" icon={FaThLarge} active={isActive('/Dashboard')}>
-                                Dashboard
-                            </NavItem>
-                            <NavItem href="/summary" icon={FaThLarge} active={isActive('/Summary')}>
-                                Summary
-                            </NavItem>
+                {/* Current User Summary */}
+                <div className="mx-3 mt-4 rounded-2xl border border-slate-100 bg-slate-50/80 p-3">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-sm font-bold text-emerald-700">
+                            {initials}
                         </div>
-                    </div>
-                    {/* Section: SLP Monitoring */}
-                    <div>
-                        <span className="px-3 text-[11px] font-semibold tracking-wider text-slate-400 uppercase block mb-2">
-                            SLP Monitoring
-                        </span>
-                        <div className="space-y-1">
-                            <NavItem href="/dashboard" icon={FaThLarge} active={isActive('/Dashboard')}>
-                                Individual Monitoring
-                            </NavItem>
-                            <NavItem href="/summary" icon={FaThLarge} active={isActive('/Summary')}>
-                                Association Monitoring
-                            </NavItem>
-                        </div>
-                    </div>
-                    {/* Section: SLP Modalities */}
-                    <div>
-                        <span className="px-3 text-[11px] font-semibold tracking-wider text-slate-400 uppercase block mb-2">
-                            SLP Beneficiaries
-                        </span>
-                        <div className="space-y-1">
-                            <NavItem href="/individual" icon={FaThLarge} active={isActive('/individual')}>
-                                Individual
-                            </NavItem>
-                            <NavItem href="/association" icon={FaClipboardList} active={isActive('/association')}>
-                                Association
-                            </NavItem>
-                        </div>
-                    </div>
 
-                    {/* Section: SLP Track */}
-                    <div>
-                        <span className="px-3 text-[11px] font-semibold tracking-wider text-slate-400 uppercase block mb-2">
-                            SLP Track / Modalities
-                        </span>
-                        <div className="space-y-1">
-                            <NavItem href="/track" icon={FaUsers} active={isActive('/track')}>
-                                Track
-                            </NavItem>
-                        </div>
-                    </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="truncate text-xs font-bold text-slate-800">
+                                {fullName}
+                            </p>
 
-                    {/* Section: Analytics */}
-                    <div>
-                        <span className="px-3 text-[11px] font-semibold tracking-wider text-slate-400 uppercase block mb-2">
-                            Analytics
-                        </span>
-                        <div className="space-y-1">
-                            <NavItem href="/analytics" icon={FaChartPie} active={isActive('/analytics')}>
-                                Analytics Dashboard
-                            </NavItem>
-                            <NavItem href="/reports" icon={FaFileAlt} active={isActive('/reports')}>
-                                Reports
-                            </NavItem>
+                            <p className="mt-1 truncate text-[10px] text-slate-500">
+                                {userRole || "Authorized User"}
+                            </p>
                         </div>
-                    </div>
 
-                    {/* Section: Location Management */}
-                    <div>
-                        <span className="px-3 text-[11px] font-semibold tracking-wider text-slate-400 uppercase block mb-2">
-                            Location Management
-                        </span>
-                        <div className="space-y-1">
-                            <NavItem href="/municipality" icon={FaBuilding} active={isActive('/municipality')}>
-                                Municipality
-                            </NavItem>
-                            <NavItem href="/barangay" icon={FaMapMarkerAlt} active={isActive('/barangay')}>
-                                Barangay
-                            </NavItem>
-                        </div>
+                        <span
+                            className={`h-2 w-2 shrink-0 rounded-full ${
+                                user?.status?.toLowerCase() === "inactive"
+                                    ? "bg-rose-500"
+                                    : "bg-emerald-500"
+                            }`}
+                            title={
+                                user?.status?.toLowerCase() === "inactive"
+                                    ? "Inactive"
+                                    : "Active"
+                            }
+                        />
                     </div>
+                </div>
 
-                    {/* Section: Users Management */}
-                    <div>
-                        <span className="px-3 text-[11px] font-semibold tracking-wider text-slate-400 uppercase block mb-2">
-                            Users Management
-                        </span>
-                        <div className="space-y-1">
-                            <NavItem href="/users" icon={FaUserCog} active={isActive('/users')}>
-                                Users
-                            </NavItem>
-                        </div>
-                    </div>
+                {/* Navigation */}
+                <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
 
+                    {/* OVERVIEW: ALL ROLES */}
+                    <NavSection title="Overview">
+                        <NavItem
+                            href="/dashboard"
+                            icon={FaThLarge}
+                            active={isActive("/dashboard")}
+                        >
+                            Dashboard
+                        </NavItem>
+
+                        <NavItem
+                            href="/summary"
+                            icon={FaChartPie}
+                            active={isActive("/summary")}
+                        >
+                            Summary
+                        </NavItem>
+                    </NavSection>
+
+                    {/* MONITORING: ADMIN, DSWD, MPDOS */}
+                    {!isLguUser && (
+                        <>
+                            <NavSection title="Program Monitoring">
+                                <NavItem
+                                    href="/slp-monitoring"
+                                    icon={FaUsers}
+                                    active={isActive("/slp-monitoring")}
+                                >
+                                    SLPA / Participant Monitoring
+                                </NavItem>
+
+                                <NavItem
+                                    href="/slp-beneficiaries"
+                                    icon={FaClipboardList}
+                                    active={isActive("/slp-beneficiaries")}
+                                >
+                                    SLP Beneficiaries
+                                </NavItem>
+                            </NavSection>
+
+                            <NavSection title="Reports & Analytics">
+                                <NavItem
+                                    href="/analytics"
+                                    icon={FaChartLine}
+                                    active={isActive("/analytics")}
+                                >
+                                    Analytics Dashboard
+                                </NavItem>
+                            </NavSection>
+                        </>
+                    )}
+
+                    {/* ADMIN ONLY */}
+                    {isAdmin && (
+                        <>
+                            <div className="mx-2 border-t border-slate-100" />
+
+                            <div className="flex items-center gap-2 px-3">
+                                <FaShieldAlt className="text-[10px] text-emerald-600" />
+
+                                <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-700">
+                                    Administration
+                                </span>
+                            </div>
+
+                            {/* SLP TRACK / MODALITIES */}
+                            <NavSection title="SLP Track / Modalities">
+                                <NavItem
+                                    href="/track"
+                                    icon={FaBriefcase}
+                                    active={isActive("/track")}
+                                >
+                                    Track Management
+                                </NavItem>
+                            </NavSection>
+
+                            {/* ENTERPRISE MANAGEMENT */}
+                            <NavSection title="Enterprise Management">
+                                <NavItem
+                                    href="/enterprisecategory"
+                                    icon={FaBuilding}
+                                    active={isActive("/enterprisecategory")}
+                                >
+                                    Enterprise / Product Categories
+                                </NavItem>
+                            </NavSection>
+
+                            {/* LOCATION MANAGEMENT */}
+                            <NavSection title="Location Management">
+                                <NavItem
+                                    href="/municipality"
+                                    icon={FaBuilding}
+                                    active={isActive("/municipality")}
+                                >
+                                    Municipalities
+                                </NavItem>
+
+                                <NavItem
+                                    href="/barangay"
+                                    icon={FaMapMarkerAlt}
+                                    active={isActive("/barangay")}
+                                >
+                                    Barangays
+                                </NavItem>
+                            </NavSection>
+
+                            {/* USERS MANAGEMENT */}
+                            <NavSection title="Users Management">
+                                <NavItem
+                                    href="/users"
+                                    icon={FaUserCog}
+                                    active={isActive("/users")}
+                                >
+                                    User Accounts
+                                </NavItem>
+                            </NavSection>
+                        </>
+                    )}
                 </nav>
+
+                {/* Sidebar Footer */}
+                <div className="border-t border-slate-100 bg-white px-4 py-4">
+                    <div className="flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+
+                        <p className="text-[10px] font-medium text-slate-500">
+                            SLP Management Portal
+                        </p>
+                    </div>
+
+                    <p className="mt-1 pl-3.5 text-[9px] text-slate-400">
+                        Authorized access only
+                    </p>
+                </div>
             </aside>
 
-            {/* Main Content Area */}
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+            {/* ================================================== */}
+            {/* MAIN CONTENT */}
+            {/* ================================================== */}
 
-                {/* Top Header */}
-                <header className="h-[50px] bg-white border-b border-slate-200/80 px-6 flex items-center justify-between z-10">
-                    <h2 className="text-slate-800 font-semibold text-base">
-                        Dashboard
-                    </h2>
+            <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
 
-                    {/* Profile Dropdown Container */}
+                {/* TOP HEADER */}
+                <header className="relative z-30 flex h-[68px] shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-7">
+
+                    <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                            <span className="hidden h-5 w-1 rounded-full bg-emerald-500 sm:block" />
+
+                            <h2 className="truncate text-sm font-bold tracking-tight text-slate-800 sm:text-base">
+                                {getPageTitle(url)}
+                            </h2>
+                        </div>
+
+                        <p className="mt-1 hidden text-[10px] text-slate-400 sm:block">
+                            Sustainable Livelihood Program
+                        </p>
+                    </div>
+
+                    {/* PROFILE DROPDOWN */}
                     <div className="relative" ref={dropdownRef}>
                         <button
                             type="button"
-                            onClick={() => setIsProfileOpen(!isProfileOpen)}
-                            className="flex items-center gap-3 p-1.5 rounded-full hover:bg-slate-100 transition duration-150 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer"
+                            onClick={() =>
+                                setIsProfileOpen((previous) => !previous)
+                            }
+                            aria-expanded={isProfileOpen}
+                            aria-haspopup="true"
+                            className="group flex items-center gap-2 rounded-2xl border border-transparent p-1.5 transition hover:border-slate-200 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 sm:gap-3 sm:pl-2"
                         >
-                            <div className="w-9 h-9 rounded-full bg-slate-900 text-white flex items-center justify-center font-semibold text-xs shadow-sm">
-                                {auth?.user?.name ? auth.user.name.charAt(0).toUpperCase() : 'U'}
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-slate-800 to-slate-600 text-xs font-bold text-white shadow-sm">
+                                {initials}
                             </div>
-                            <div className="hidden sm:block text-left pr-1">
-                                <p className="text-xs font-semibold text-slate-700 leading-tight">
-                                    {auth?.user?.name || 'User Profile'}
+
+                            <div className="hidden text-left sm:block">
+                                <p className="max-w-[180px] truncate text-xs font-bold text-slate-700">
+                                    {fullName}
                                 </p>
-                                <p className="text-[10px] text-slate-400 leading-tight">
-                                    {auth?.user?.email || 'user@example.com'}
+
+                                <p className="mt-0.5 max-w-[180px] truncate text-[10px] text-slate-400">
+                                    {userEmail}
                                 </p>
                             </div>
-                            <FaChevronDown className={`text-slate-400 text-xs transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} />
+
+                            <FaChevronDown
+                                className={`mr-1 text-[10px] text-slate-400 transition-transform duration-200 ${
+                                    isProfileOpen ? "rotate-180" : ""
+                                }`}
+                            />
                         </button>
 
-                        {/* Dropdown Menu Popup */}
                         {isProfileOpen && (
-                            <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50">
-                                
-                                {/* User Info Header */}
-                                <div className="px-4 py-2 border-b border-slate-100 mb-1">
-                                    <p className="text-xs font-semibold text-slate-800 truncate">
-                                        {auth?.user?.name || 'User Profile'}
-                                    </p>
-                                    <p className="text-[11px] text-slate-400 truncate">
-                                        {auth?.user?.email || 'user@example.com'}
-                                    </p>
+                            <div className="absolute right-0 z-50 mt-2 w-72 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10">
+
+                                {/* Profile Details */}
+                                <div className="bg-gradient-to-br from-emerald-50 to-white px-4 py-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-sm font-bold text-white shadow-md shadow-emerald-600/20">
+                                            {initials}
+                                        </div>
+
+                                        <div className="min-w-0 flex-1">
+                                            <p className="truncate text-sm font-bold text-slate-800">
+                                                {fullName}
+                                            </p>
+
+                                            <p className="mt-1 truncate text-[11px] text-slate-500">
+                                                {userEmail}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {userRole && (
+                                        <div className="mt-3">
+                                            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-white px-2.5 py-1 text-[10px] font-bold text-emerald-700">
+                                                <FaShieldAlt className="text-[9px]" />
+                                                {userRole}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
 
-                                {/* Link: Profile Settings */}
-                                <Link
-                                    href="/profile"
-                                    className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-slate-600 hover:text-emerald-600 hover:bg-emerald-50/50 transition"
-                                    onClick={() => setIsProfileOpen(false)}
-                                >
-                                    <FaUser className="text-slate-400 text-xs" />
-                                    <span>Profile Modification</span>
-                                </Link>
+                                <div className="p-2">
+                                    <Link
+                                        href="/profile"
+                                        onClick={() =>
+                                            setIsProfileOpen(false)
+                                        }
+                                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium text-slate-600 transition hover:bg-emerald-50 hover:text-emerald-700"
+                                    >
+                                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+                                            <FaUser />
+                                        </span>
 
-                                <div className="my-1 border-t border-slate-100" />
+                                        <span>Profile Modification</span>
+                                    </Link>
 
-                                {/* Link: Logout */}
-                                <Link
-                                    href="/logout"
-                                    method="post"
-                                    as="button"
-                                    className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50/50 transition text-left cursor-pointer"
-                                    onClick={() => setIsProfileOpen(false)}
-                                >
-                                    <FaSignOutAlt className="text-rose-500 text-xs" />
-                                    <span>Log Out</span>
-                                </Link>
+                                    <Link
+                                        href="/logout"
+                                        method="post"
+                                        as="button"
+                                        type="button"
+                                        onClick={() =>
+                                            setIsProfileOpen(false)
+                                        }
+                                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-medium text-rose-600 transition hover:bg-rose-50"
+                                    >
+                                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-500">
+                                            <FaSignOutAlt />
+                                        </span>
+
+                                        <span>Log Out</span>
+                                    </Link>
+                                </div>
                             </div>
                         )}
                     </div>
                 </header>
 
-                {/* Page Body */}
-                <main className="flex-1 p-2 overflow-y-auto bg-white">
+                {/* PAGE CONTENT */}
+                <main className="flex-1 overflow-y-auto bg-slate-50 p-3 sm:p-5 lg:p-6">
                     {children}
                 </main>
-
             </div>
         </div>
     );
 }
 
-// Reusable Navigation Link Component
+/*
+|--------------------------------------------------------------------------
+| Navigation Section
+|--------------------------------------------------------------------------
+*/
+function NavSection({ title, children }) {
+    return (
+        <section>
+            <h3 className="mb-2 px-3 text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-400">
+                {title}
+            </h3>
+
+            <div className="space-y-1">{children}</div>
+        </section>
+    );
+}
+
+/*
+|--------------------------------------------------------------------------
+| Navigation Item
+|--------------------------------------------------------------------------
+*/
 function NavItem({ href, icon: Icon, active, children }) {
     return (
         <Link
             href={href}
-            className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 ${
+            aria-current={active ? "page" : undefined}
+            className={`group relative flex items-center gap-3 overflow-hidden rounded-xl px-3 py-2.5 text-xs transition-all duration-200 ${
                 active
-                    ? 'bg-emerald-50 text-emerald-700 font-semibold'
-                    : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900'
+                    ? "bg-emerald-50 font-bold text-emerald-800 shadow-sm"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
             }`}
         >
-            <Icon className={`text-sm ${active ? 'text-emerald-600' : 'text-slate-400'}`} />
-            <span>{children}</span>
+            {active && (
+                <span className="absolute bottom-2 left-0 top-2 w-[3px] rounded-r-full bg-emerald-600" />
+            )}
+
+            <Icon
+                className={`ml-0.5 shrink-0 text-sm transition-colors ${
+                    active
+                        ? "text-emerald-600"
+                        : "text-slate-400 group-hover:text-slate-600"
+                }`}
+            />
+
+            <span className="min-w-0 flex-1 leading-5">
+                {children}
+            </span>
         </Link>
     );
+}
+
+/*
+|--------------------------------------------------------------------------
+| Page Title
+|--------------------------------------------------------------------------
+*/
+function getPageTitle(url) {
+    const path = url.split("?")[0].replace(/\/+$/, "") || "/";
+
+    const pageTitles = [
+        {
+            path: "/individualmonitoring",
+            title: "Individual Monitoring",
+        },
+        {
+            path: "/associationmonitoring",
+            title: "Association Monitoring",
+        },
+        {
+            path: "/slp-monitoring",
+            title: "SLP Monitoring",
+        },
+        {
+            path: "/slp-beneficiaries",
+            title: "SLP Beneficiaries",
+        },
+        {
+            path: "/enterprisecategory",
+            title: "Enterprise Management",
+        },
+        {
+            path: "/municipality",
+            title: "Municipality Management",
+        },
+        {
+            path: "/barangay",
+            title: "Barangay Management",
+        },
+        {
+            path: "/dashboard",
+            title: "Dashboard",
+        },
+        {
+            path: "/summary",
+            title: "SLP Summary Records",
+        },
+        {
+            path: "/individual",
+            title: "Individual Beneficiaries",
+        },
+        {
+            path: "/association",
+            title: "Association Beneficiaries",
+        },
+        {
+            path: "/track",
+            title: "SLP Track / Modalities",
+        },
+        {
+            path: "/analytics",
+            title: "Analytics Dashboard",
+        },
+        {
+            path: "/reports",
+            title: "Reports",
+        },
+        {
+            path: "/users",
+            title: "Users Management",
+        },
+        {
+            path: "/profile",
+            title: "Profile Modification",
+        },
+    ];
+
+    const matchedPage = pageTitles
+        .sort((a, b) => b.path.length - a.path.length)
+        .find(
+            (page) =>
+                path === page.path ||
+                path.startsWith(`${page.path}/`)
+        );
+
+    return matchedPage?.title || "SLP Management Portal";
 }

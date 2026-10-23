@@ -9,71 +9,172 @@ use Inertia\Inertia;
 
 class BarangayController extends Controller
 {
+    /**
+     * Display Barangay Management page.
+     */
     public function index()
     {
+        $barangays = Barangay::with('municipalityRelation')
+            ->orderByDesc('barangay_id')
+            ->get();
+
+        $municipalities = Municipality::query()
+            ->where('status', 'Active')
+            ->orderBy('municipality')
+            ->get();
+
         return Inertia::render('Admin/Barangay', [
-            'barangays' => Barangay::latest('barangay_id')->get(),
-            'municipalities' => Municipality::where('status', 'Active')->get(),
+            'barangays' => $barangays,
+            'municipalities' => $municipalities,
         ]);
     }
 
+    /**
+     * Store a new Barangay.
+     */
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'barangay_name'   => 'required|string|max:255',
-            'purok'           => 'nullable|string|max:255',
-            'municipality_id' => 'required|exists:municipalities,id',
-            'status'          => 'required|in:Active,Inactive',
+            'barangay_name' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+
+            'purok' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'municipality_id' => [
+                'required',
+                'integer',
+                'exists:municipalities,municipality_id',
+            ],
+
+            'status' => [
+                'required',
+                'in:Active,Inactive',
+            ],
         ]);
 
-        $municipality = Municipality::findOrFail($request->municipality_id);
+        /*
+        |--------------------------------------------------------------------------
+        | Get Selected Municipality
+        |--------------------------------------------------------------------------
+        */
+        $municipality = Municipality::where(
+            'municipality_id',
+            $validated['municipality_id']
+        )->firstOrFail();
 
+        /*
+        |--------------------------------------------------------------------------
+        | Create Barangay
+        |--------------------------------------------------------------------------
+        */
         Barangay::create([
-            'barangay_name'   => $validated['barangay_name'],
-            'purok'           => $validated['purok'],
-            'municipality_id' => $municipality->id,
-            'municipality'    => $municipality->municipality,
-            'region'          => $municipality->region,
-            'province'        => $municipality->province,
-            'zipcode'         => $municipality->zipcode,
-            'status'          => $validated['status'],
+            'barangay_name' => $validated['barangay_name'],
+            'purok' => $validated['purok'] ?? null,
+
+            // Foreign key
+            'municipality_id' => $municipality->municipality_id,
+
+            // Municipality information
+            'municipality' => $municipality->municipality,
+            'region' => $municipality->region,
+            'province' => $municipality->province,
+            'zipcode' => $municipality->zipcode,
+
+            'status' => $validated['status'],
         ]);
 
-        return redirect()->back()->with('success', 'Barangay created successfully.');
+        return redirect()
+            ->back()
+            ->with('success', 'Barangay created successfully.');
     }
 
+    /**
+     * Update an existing Barangay.
+     */
     public function update(Request $request, $id)
     {
         $barangay = Barangay::findOrFail($id);
 
         $validated = $request->validate([
-            'barangay_name'   => 'required|string|max:255',
-            'purok'           => 'nullable|string|max:255',
-            'municipality_id' => 'required|exists:municipalities,id',
-            'status'          => 'required|in:Active,Inactive',
+            'barangay_name' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+
+            'purok' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'municipality_id' => [
+                'required',
+                'integer',
+                'exists:municipalities,municipality_id',
+            ],
+
+            'status' => [
+                'required',
+                'in:Active,Inactive',
+            ],
         ]);
 
-        $municipality = Municipality::findOrFail($request->municipality_id);
+        /*
+        |--------------------------------------------------------------------------
+        | Get Selected Municipality
+        |--------------------------------------------------------------------------
+        */
+        $municipality = Municipality::where(
+            'municipality_id',
+            $validated['municipality_id']
+        )->firstOrFail();
 
+        /*
+        |--------------------------------------------------------------------------
+        | Update Barangay
+        |--------------------------------------------------------------------------
+        */
         $barangay->update([
-            'barangay_name'   => $validated['barangay_name'],
-            'purok'           => $validated['purok'],
-            'municipality_id' => $municipality->id,
-            'municipality'    => $municipality->municipality,
-            'region'          => $municipality->region,
-            'province'        => $municipality->province,
-            'zipcode'         => $municipality->zipcode,
-            'status'          => $validated['status'],
+            'barangay_name' => $validated['barangay_name'],
+            'purok' => $validated['purok'] ?? null,
+
+            // Foreign key
+            'municipality_id' => $municipality->municipality_id,
+
+            // Municipality information
+            'municipality' => $municipality->municipality,
+            'region' => $municipality->region,
+            'province' => $municipality->province,
+            'zipcode' => $municipality->zipcode,
+
+            'status' => $validated['status'],
         ]);
 
-        return redirect()->back()->with('success', 'Barangay updated successfully.');
+        return redirect()
+            ->back()
+            ->with('success', 'Barangay updated successfully.');
     }
 
+    /**
+     * Delete Barangay.
+     */
     public function destroy($id)
     {
         $barangay = Barangay::findOrFail($id);
+
         $barangay->delete();
 
-        return redirect()->back()->with('success', 'Barangay deleted successfully.');
+        return redirect()
+            ->back()
+            ->with('success', 'Barangay deleted successfully.');
     }
 }
+

@@ -39,9 +39,9 @@ export default function Municipality({ municipalities, filters, stats }) {
         setIsModalOpen(true);
     };
 
-    const handleDelete = (id) => {
+    const handleDelete = (municipality_id) => {
         if (confirm('Are you sure you want to delete this municipality?')) {
-            router.delete(route('municipality.destroy', id));
+            router.delete(route('municipality.destroy', municipality_id));
         }
     };
 
@@ -73,7 +73,7 @@ export default function Municipality({ municipalities, filters, stats }) {
                         </p>
                     </div>
 
-                    {/* Toolbar: Search & Primary Action */}
+                        {/* Toolbar: Search & Primary Action */}
                     <div className="flex items-center gap-3">
                         <div className="relative flex-1 md:w-72">
                             <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs" />
@@ -153,10 +153,10 @@ export default function Municipality({ municipalities, filters, stats }) {
                                 {municipalities?.data?.length > 0 ? (
                                     municipalities.data.map((item) => (
                                         <TableRow 
-                                            key={item.id}
+                                            key={item.municipality_id}
                                             data={item}
                                             onEdit={() => handleOpenEditModal(item)}
-                                            onDelete={() => handleDelete(item.id)}
+                                            onDelete={() => handleDelete(item.municipality_id)}
                                         />
                                     ))
                                 ) : (

@@ -9,11 +9,28 @@ class Municipality extends Model
 {
     use HasFactory;
 
+    protected $table = 'municipalities';
+
+    protected $primaryKey = 'municipality_id';
+
+    public $incrementing = true;
+
+    protected $keyType = 'int';
+
     protected $fillable = [
         'municipality',
-        'region',
         'province',
+        'region',
         'zipcode',
         'status',
     ];
+
+    public function barangays()
+    {
+        return $this->hasMany(
+            Barangay::class,
+            'municipality_id',
+            'municipality_id'
+        );
+    }
 }

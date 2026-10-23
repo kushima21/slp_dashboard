@@ -12,7 +12,9 @@ return new class extends Migration
             $table->id('barangay_id');
             $table->string('barangay_name');
             $table->string('purok')->nullable();
-            $table->foreignId('municipality_id')->constrained('municipalities', 'id')->onDelete('cascade');
+           $table->foreignId('municipality_id')
+    ->constrained('municipalities', 'municipality_id')
+    ->onDelete('cascade');
             $table->string('municipality');
             $table->string('region');
             $table->string('province');

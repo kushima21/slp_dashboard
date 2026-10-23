@@ -1,3 +1,4 @@
+
 <?php
 
 use Illuminate\Database\Migrations\Migration;
@@ -9,12 +10,16 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('municipalities', function (Blueprint $table) {
-            $table->id();
+            $table->bigIncrements('municipality_id');
+
             $table->string('municipality');
             $table->string('region');
             $table->string('province');
-            $table->string('zipcode');
-            $table->enum('status', ['Active', 'Inactive'])->default('Active');
+            $table->string('zipcode', 20);
+
+            $table->enum('status', ['Active', 'Inactive'])
+                  ->default('Active');
+
             $table->timestamps();
         });
     }

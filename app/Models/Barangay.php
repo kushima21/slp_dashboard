@@ -9,7 +9,13 @@ class Barangay extends Model
 {
     use HasFactory;
 
+    protected $table = 'barangays';
+
     protected $primaryKey = 'barangay_id';
+
+    public $incrementing = true;
+
+    protected $keyType = 'int';
 
     protected $fillable = [
         'barangay_name',
@@ -22,8 +28,21 @@ class Barangay extends Model
         'status',
     ];
 
+    protected $casts = [
+        'barangay_id' => 'integer',
+        'municipality_id' => 'integer',
+    ];
+
+    /**
+     * Barangay belongs to Municipality.
+     */
     public function municipalityRelation()
     {
-        return $this->belongsTo(Municipality::class, 'municipality_id');
+        return $this->belongsTo(
+            Municipality::class,
+            'municipality_id',
+            'municipality_id'
+        );
     }
 }
+
